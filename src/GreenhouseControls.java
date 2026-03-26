@@ -20,8 +20,11 @@ import java.io.*;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+import static java.lang.Integer.parseInt;
 
 import tme3.*;
+
+
 
 
 // BASICALLY THE MAIN APPLICATION OF AN EVENT DRIVEN SCHEDULING SYSTEM
@@ -181,8 +184,18 @@ public class GreenhouseControls extends Controller {
 
                     // if it matches, plug in the variables and create the event
                     if(eventName.equals("Bell")) {
-                        int rings = Integer.parseInt(match.group(3));
-                        addEvent(new Bell(time, rings));
+
+                        // Bell needed another conditional to handle the example files that do not
+                        // supply a number of rings, such as examples1
+                        // check if the third regex group (for rings) is null
+                        if (match.group(3) != null) {
+                            int rings = parseInt(match.group(3)); // if not parse it
+                            addEvent(new Bell(time, rings));
+                        } else if (match.group(3) == null) {
+                            int rings = 1; // if it is, set rings to 1
+                            addEvent(new Bell(time, rings));
+                        }
+
                     } else if (eventName.equals("LightOn")) {
                         addEvent(new LightOn(time));
                     } else if (eventName.equals("LightOff")) {
