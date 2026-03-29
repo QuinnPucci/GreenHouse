@@ -33,5 +33,6 @@ public abstract class Event {
   public boolean ready() {
     return System.currentTimeMillis() >= eventTime;
   }
-  public abstract void action();
+  public abstract void action() throws ControllerException;
+  // I moved ControllerException to tme3, and added the throw to the abstract method from the super class
 } ///:~

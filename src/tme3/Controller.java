@@ -32,8 +32,19 @@ public class Controller {
       for(Event e : new ArrayList<Event>(eventList))
         if(e.ready()) {
           System.out.println(e); // this prints the events to string
-          e.action(); // this calls the action
+          try { // now that action throws an exception, the call in run has to be in a try catch block.
+              e.action(); // this calls the action
+          } catch (ControllerException ex) {
+              System.err.println("Emergency Shutdown Initiated"); // THERE IS SUPPOSED TO BE A METHOD HERE FOR EMERGENCY SHUTDOWN
+              this.shutdown();
+          }
+
           eventList.remove(e); // then removes it from the list
         }
+  }
+
+  // create shutdown method
+  public void shutdown() {
+
   }
 } ///:~

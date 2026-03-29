@@ -17,6 +17,10 @@
  */
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
@@ -29,17 +33,76 @@ import tme3.*;
 
 // BASICALLY THE MAIN APPLICATION OF AN EVENT DRIVEN SCHEDULING SYSTEM
 
-public class GreenhouseControls extends Controller {
+public class GreenhouseControls extends Controller implements Serializable {
 
     // task one, fans
     private boolean fans = false;
     // ------
 
+    // step 3 instance variables
+    private boolean windowok = true;
+    private boolean poweron = true;
+    private int errorcode;
+
   private boolean light = false;
   private boolean water = false;
 
   private String thermostat = "Day";
-  private String eventsFile = "examples1.txt";
+  private String eventsFile;
+
+  // override controllers shutdown method
+  // functionality here so I can access error code
+  @Override
+  public void shutdown(){
+
+      // declare and init the strings going in the logs
+      String reason = "";
+      String seperator = "----------------------------";
+      // used this for time -> https://www.w3schools.com/java/java_date.asp
+      LocalTime now = LocalTime.now();
+      String timeLog = "Time: " + now.toString();
+
+      // ERROR.LOG LOGIC
+      if (errorcode == 1){
+          reason = "Error Code 1: Window Malfunction has caused emergency shutdown procedure.";
+      } else if (errorcode == 2){
+          reason = "Error Code 2: Power Outage has caused emergency shutdown procedure.";
+      }
+      // using try-with-resources so it automatically closes the writer when done (no need for finally)
+      try (PrintWriter out = new PrintWriter(
+              new BufferedWriter(new FileWriter("error.log",true)))) { // true so it appends to error log instead of overwrite
+          // shutdown message
+          out.println(reason);
+          // time stamp
+          out.println(timeLog);
+          // clean the log by using a seperator line
+          out.println(seperator);
+
+      } catch (IOException e) {
+          System.err.println("IO Error");
+          throw new RuntimeException(e);
+          // throw unchecked exception so the program fails and terminates
+      }
+
+      // DUMP.OUT LOGIC
+      try (ObjectOutputStream obOut = new ObjectOutputStream(new FileOutputStream("dump.out"))) {
+          obOut.writeObject(this);
+      }
+      catch (FileNotFoundException e) {
+          System.err.println("File not Found");
+          throw new RuntimeException(e);
+      }
+      catch (IOException e){
+          System.err.println("IO Error");
+          throw new RuntimeException(e);
+      }
+
+      // console print and terminate program
+      System.out.println(reason);
+      System.out.println(timeLog);
+      System.exit(0);
+
+  }
 
     // FAN METHODS
     public class FansOn extends Event{
@@ -151,6 +214,35 @@ public class GreenhouseControls extends Controller {
     public String toString() { return "Bing!"; }
   }
 
+  // -------------- PROBLEMS CLASSES (Step 3) --------------------
+
+  public class WindowMalfunction extends Event {
+      public WindowMalfunction(long delayTime) {
+          super(delayTime);
+      }
+      // throws controller exception, sets windowok to false, and error code to 1
+      public void action() throws ControllerException{
+          windowok = false;
+          errorcode = 1;
+          throw new ControllerException();
+      }
+      public String toString() { return "Window Malfunction"; }
+  }
+
+  public class PowerOut extends Event {
+      public PowerOut(long delayTime) {
+          super(delayTime);
+      }
+      // throws controller exception, sets poweron to false, and error code to 2
+      public void action() throws ControllerException{
+          poweron = false;
+          errorcode = 2;
+          throw new ControllerException();
+      }
+      public String toString() { return "Power Out";}
+  }
+  // -------------- PROBLEMS END -------------------------
+
   public class Restart extends Event {
         String inputEvents; // make it an instance variable so I can use it in action
     public Restart(long delayTime, String filename) {
@@ -182,17 +274,17 @@ public class GreenhouseControls extends Controller {
                     String eventName = match.group(1); // event name
                     long time = Long.parseLong(match.group(2)); // delay time
 
-                    // if it matches, plug in the variables and create the event
+                    // if it matches an events name
                     if(eventName.equals("Bell")) {
 
                         // Bell needed another conditional to handle the example files that do not
                         // supply a number of rings, such as examples1
                         // check if the third regex group (for rings) is null
                         if (match.group(3) != null) {
-                            int rings = parseInt(match.group(3)); // if not parse it
-                            addEvent(new Bell(time, rings));
+                            int rings = parseInt(match.group(3)); // if not null, parse it
+                            addEvent(new Bell(time, rings)); // plug in the variables and create the event
                         } else if (match.group(3) == null) {
-                            int rings = 1; // if it is, set rings to 1
+                            int rings = 1; // if it is null, set rings to 1
                             addEvent(new Bell(time, rings));
                         }
 
@@ -210,6 +302,10 @@ public class GreenhouseControls extends Controller {
                         addEvent(new ThermostatDay(time));
                     } else if (eventName.equals("Terminate")) {
                         addEvent(new Terminate(time));
+                    } else if (eventName.equals("WindowMalfunction")) {
+                        addEvent(new WindowMalfunction(time));
+                    } else if (eventName.equals("PowerOut")) {
+                        addEvent(new PowerOut(time));
                     }
                 }
 
