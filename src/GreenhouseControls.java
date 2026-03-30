@@ -103,6 +103,32 @@ public class GreenhouseControls extends Controller implements Serializable {
       System.exit(0);
 
   }
+  // ------------------ STEP 4 METHODS --------------------------
+  // Simple getter for error code
+  public int getError() {
+      return this.errorcode;
+  }
+    // getFixable
+  Fixable getFixable(int errorcode){
+      if (errorcode == 1){
+          // create a new fixable object based on error
+          FixWindow fw = new FixWindow();
+          // call the fix method to reset error code and "fix" the problem
+          fw.fix();
+          // return the fixable object
+          return fw;
+      } else if (errorcode == 2) {
+          PowerOn po = new PowerOn();
+          po.fix();
+          return po;
+      } else {
+          // if its not a known error code, print a simple messge and return null
+          System.out.println("Not a known errorcode");
+          return null;
+      }
+  }
+    // ------------------ STEP 4 METHODS end
+    // --------------------------
 
     // FAN METHODS
     public class FansOn extends Event{
@@ -241,7 +267,107 @@ public class GreenhouseControls extends Controller implements Serializable {
       }
       public String toString() { return "Power Out";}
   }
-  // -------------- PROBLEMS END -------------------------
+    // -------------- PROBLEMS END -------------------------
+
+
+    // -------------- STEP 4 RESTORATION CLASSES --------------------
+
+    class PowerOn implements Fixable {
+        public void fix() {
+            // turns Power on, zero out error codes
+            poweron = true;
+            errorcode = 0;
+        }
+        public void log() {
+            // logs to a text file in the current directory called fix.log
+            // prints to the console, and identify time and nature of
+            // the fix
+            // set up strings for the log
+            String fix = "Power Outage (Error Code 2) Recovery: Power Restored";
+            String seperator = "----------------------------";
+            LocalTime now = LocalTime.now();
+            String timeLog = "Time: " + now.toString();
+
+            // try-with-resources
+            try (PrintWriter out = new PrintWriter(
+                    new BufferedWriter(new FileWriter("fix.log",true)))) {
+                // recovery message
+                out.println(fix);
+                // time stamp
+                out.println(timeLog);
+                // clean the log by using a seperator line
+                out.println(seperator);
+
+            } catch (IOException e) {
+                System.err.println("IO Error");
+                throw new RuntimeException(e);
+            }
+            // print to console
+            System.out.println(fix);
+            System.out.println(timeLog);
+        }
+
+    }
+
+    class FixWindow implements Fixable {
+        public void fix() {
+            // fix window and zero error codes
+            windowok = true;
+            errorcode = 0;
+        }
+        public void log() {
+            // logs to a text file in the current directory called fix.log
+            // prints to the console, and identify time and nature of
+            // the fix
+            // Set up the strings for the log
+            String fix = "Broken Window (Error code 1) Recovery: Window Fixed";
+            String seperator = "----------------------------";
+            LocalTime now = LocalTime.now();
+            String timeLog = "Time: " + now.toString();
+
+            // try-with-resources
+            try (PrintWriter out = new PrintWriter(
+                    new BufferedWriter(new FileWriter("fix.log",true)))) {
+                // recovery message
+                out.println(fix);
+                // time stamp
+                out.println(timeLog);
+                // clean the log by using a seperator line
+                out.println(seperator);
+
+            } catch (IOException e) {
+                System.err.println("IO Error");
+                throw new RuntimeException(e);
+            }
+            // print to console
+            System.out.println(fix);
+            System.out.println(timeLog);
+        }
+
+    }
+
+    // -------------- STEP 4 RESTORATION CLASSES END --------------------
+
+    // -------------- STEP 4 RESTORE CLASS -----------------
+  public class Restore {
+      // create a resotre method that reads the object from dump.out and returns
+      // a Restore object to be used in main for arg -d
+      public GreenhouseControls Restore() {
+          GreenhouseControls restoredgc = null;
+          try (ObjectInputStream in = new ObjectInputStream(new FileInputStream("dump.out"))) {
+              restoredgc = (GreenhouseControls) in.readObject();
+          } catch (ClassNotFoundException err) {
+              System.err.println("Class not Found");
+          } catch (FileNotFoundException err) {
+              System.err.println("File not Found");
+          } catch (IOException err) {
+              System.err.println("IO Error");
+          }
+          return restoredgc; // return deserialized gc object
+      }
+  }
+  // -------------- STEP 4 RESTORE CLASS END-----------------
+
 
   public class Restart extends Event {
         String inputEvents; // make it an instance variable so I can use it in action
@@ -351,6 +477,8 @@ public class GreenhouseControls extends Controller implements Serializable {
 	    }
 
 	    gc.run();
+
+        // A NEW IF FOR -d RESTORE -> create resore object here
 	}
 	catch (ArrayIndexOutOfBoundsException e) {
 	    System.out.println("Invalid number of parameters");
