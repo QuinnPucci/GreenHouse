@@ -16,11 +16,12 @@
 
 
 package tme3;
+import java.io.Serializable;
 import java.util.*;
 
 // CONTROLLER MANAGER A LIST OF EVENTS
-
-public class Controller {
+// make this serializable too
+public class Controller implements Serializable {
   // A class from java.util to hold Event objects:
   private List<Event> eventList = new ArrayList<Event>();
   public void addEvent(Event c) { eventList.add(c); }

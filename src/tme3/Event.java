@@ -20,7 +20,8 @@ import java.io.*;
 
 
 // ABSTRACT BASE TYPE FOR ALL EVENTS
-public abstract class Event {
+// make this serializable too
+public abstract class Event implements Serializable {
   private long eventTime;
   protected final long delayTime;
   public Event(long delayTime) {

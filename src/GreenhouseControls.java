@@ -349,12 +349,14 @@ public class GreenhouseControls extends Controller implements Serializable {
     // -------------- STEP 4 RESTORATION CLASSES END --------------------
 
     // -------------- STEP 4 RESTORE CLASS -----------------
-  public class Restore {
+  public static class Restore {
       // create a resotre method that reads the object from dump.out and returns
       // a Restore object to be used in main for arg -d
-      public GreenhouseControls Restore() {
+      public GreenhouseControls Restore(String dumpFile) {
           GreenhouseControls restoredgc = null;
+          // set the var
           try (ObjectInputStream in = new ObjectInputStream(new FileInputStream("dump.out"))) {
+              // create object input and set it as the var
               restoredgc = (GreenhouseControls) in.readObject();
           } catch (ClassNotFoundException err) {
               System.err.println("Class not Found");
@@ -374,6 +376,7 @@ public class GreenhouseControls extends Controller implements Serializable {
     public Restart(long delayTime, String filename) {
         super(delayTime);
         this.inputEvents = filename;
+        GreenhouseControls.this.eventsFile = filename; // this is for saving it for the restore
     }
 
     public void action() {
@@ -461,29 +464,47 @@ public class GreenhouseControls extends Controller implements Serializable {
 
 //---------------------------------------------------------
     public static void main(String[] args) {
-	try {
-	    String option = args[0];
-	    String filename = args[1];
+      // wrap everything in a try
+      try {
+            String option = args[0];
+            String filename = args[1];
 
-	    if ( !(option.equals("-f")) && !(option.equals("-d")) ) {
-		System.out.println("Invalid option");
-		printUsage();
-	    }
+            if (!(option.equals("-f")) && !(option.equals("-d"))) {
+                System.out.println("Invalid option");
+                printUsage();
+                return;
+            }
 
-	    GreenhouseControls gc = new GreenhouseControls();
+            if (option.equals("-f")) {
+                GreenhouseControls gc = new GreenhouseControls();
+                gc.addEvent(gc.new Restart(0, filename));
+                gc.run();
+            }
+            // if we are using -d
+            else if (option.equals("-d")) {
+                // create a resore object
+                Restore r = new Restore();
+                // create a greenhouse controls object using the deserialized object
+                GreenhouseControls restoredGC = r.Restore(filename);
 
-	    if (option.equals("-f"))  {
-		gc.addEvent(gc.new Restart(0,filename)); // this is how we start it with the input
-	    }
+                if (restoredGC != null) {
+                    System.out.println(restoredGC);
+                    // create a fixable object and run get fixable method to know what type of error it was
+                    Fixable fixable = restoredGC.getFixable(restoredGC.getError());
 
-	    gc.run();
+                    if (fixable != null) {
+                        fixable.fix();
+                        fixable.log();
+                    }
+                    // run the remaining events
+                    restoredGC.run();
+                }
+            }
 
-        // A NEW IF FOR -d RESTORE -> create resore object here
-	}
-	catch (ArrayIndexOutOfBoundsException e) {
-	    System.out.println("Invalid number of parameters");
-	    printUsage();
-	}
+        } catch (ArrayIndexOutOfBoundsException e) {
+            System.out.println("Invalid number of parameters");
+            printUsage();
+        }
     }
 
 } ///:~
